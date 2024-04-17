@@ -14,39 +14,46 @@ enum TokenId {
     B
 }
 
+event Deposited(address indexed token, uint256 amount);
+event Swapped(
+    address indexed fromToken,
+    address indexed toToken,
+    uint256 amount
+);
+
 /**
- * @dev This contract allows two ERC-20 tokens to be exchanged 1-to-1.
+ * @dev This contract allows two ERC-20 tokens to be swapped 1-to-1.
  */
 contract Pair {
     IERC20 public tokenA;
     IERC20 public tokenB;
 
     /**
-     * @dev Constructor that sets the addresses of the two tokens that can be exchanged.
+     * @dev Constructor that sets the addresses of the two tokens that can be swapped.
      */
     constructor(address tokenAddressA, address tokenAddressB) {
         tokenA = IERC20(tokenAddressA);
         tokenB = IERC20(tokenAddressB);
     }
 
-    function isValidToken(address tokenAddress) public view returns (bool) {
+    function isValidToken(address tokenAddress) internal view returns (bool) {
         return
             tokenAddress == address(tokenA) || tokenAddress == address(tokenB);
     }
 
-    function requireValidToken(address tokenAddress) public view {
+    function requireValidToken(address tokenAddress) internal view {
         if (!isValidToken(tokenAddress)) {
             revert InvalidToken();
         }
     }
 
-    function requireSuccessfulTransfer(bool success) public pure {
+    function requireSuccessfulTransfer(bool success) internal pure {
         if (!success) {
             revert TrasferFailed();
         }
     }
 
-    function requireValidTokenPair(address a, address b) public view {
+    function requireValidTokenPair(address a, address b) internal view {
         if (!isValidToken(a) || !isValidToken(b)) {
             revert InvalidToken();
         }
@@ -58,33 +65,34 @@ contract Pair {
     /**
      * @dev Deposits a token into the contract. Deposited tokens cannot be withdrawn.
      */
-    function deposit(uint256 amount, address tokenAddress) public {
+    function deposit(address tokenAddress, uint256 amount) public virtual {
         requireValidToken(tokenAddress);
         requireSuccessfulTransfer(
             IERC20(tokenAddress).transferFrom(msg.sender, address(this), amount)
         );
+        emit Deposited(tokenAddress, amount);
     }
 
     /**
      * @dev Deposits a token into the contract. Deposited tokens cannot be withdrawn.
      * The token to deposit is determined by the `tokenId` parameter.
      */
-    function depositLite(uint256 amount, TokenId tokenId) public {
+    function depositLite(TokenId tokenId, uint256 amount) public virtual {
         if (tokenId == TokenId.A) {
-            deposit(amount, address(tokenA));
+            deposit(address(tokenA), amount);
         } else {
-            deposit(amount, address(tokenB));
+            deposit(address(tokenB), amount);
         }
     }
 
     /**
-     * @dev Exchanges an amount of one token for an equal amount of another token.
+     * @dev Swaps an amount of one token for an equal amount of another token.
      */
-    function exchange(
-        uint256 amount,
+    function swap(
         address fromTokenAddress,
-        address toTokenAddress
-    ) public {
+        address toTokenAddress,
+        uint256 amount
+    ) public virtual {
         requireValidTokenPair(fromTokenAddress, toTokenAddress);
         // Transfer the input tokens from the sender to this contract.
         requireSuccessfulTransfer(
@@ -98,17 +106,18 @@ contract Pair {
         requireSuccessfulTransfer(
             IERC20(toTokenAddress).transfer(msg.sender, amount)
         );
+        emit Swapped(fromTokenAddress, toTokenAddress, amount);
     }
 
     /**
-     * @dev Exchanges an amount of one token for an equal amount of another token.
-     * The tokens to exchange are determined by the `inTokenId` parameter.
+     * @dev Swaps an amount of one token for an equal amount of another token.
+     * The tokens to swap are determined by the `inTokenId` parameter.
      */
-    function exchangeLite(uint256 amount, TokenId inTokenId) public {
+    function swapLite(TokenId inTokenId, uint256 amount) public virtual {
         if (inTokenId == TokenId.A) {
-            exchange(amount, address(tokenA), address(tokenB));
+            swap(address(tokenA), address(tokenB), amount);
         } else {
-            exchange(amount, address(tokenB), address(tokenA));
+            swap(address(tokenB), address(tokenA), amount);
         }
     }
 }
