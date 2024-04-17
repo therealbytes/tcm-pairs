@@ -31,9 +31,9 @@ contract Pair {
     /**
      * @dev Constructor that sets the addresses of the two tokens that can be swapped.
      */
-    constructor(address tokenAddressA, address tokenAddressB) {
-        tokenA = IERC20(tokenAddressA);
-        tokenB = IERC20(tokenAddressB);
+    constructor(address _tokenAddressA, address _tokenAddressB) {
+        tokenA = IERC20(_tokenAddressA);
+        tokenB = IERC20(_tokenAddressB);
     }
 
     function isValidToken(address tokenAddress) internal view returns (bool) {

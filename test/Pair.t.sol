@@ -2,9 +2,53 @@
 pragma solidity ^0.8.13;
 
 import {ERC20Mock} from "@openzeppelin/mocks/token/ERC20Mock.sol";
+import {Test, console2} from "forge-std/Test.sol";
 
-import {Test, console} from "forge-std/Test.sol";
 import {Pair, TokenId} from "../src/Pair.sol";
+
+library PairTestLib {
+    function mintAndApprove(
+        ERC20Mock token,
+        address spender,
+        uint256 amount
+    ) public {
+        token.mint(address(this), amount);
+        token.approve(spender, amount);
+    }
+
+    function prepareSwap(
+        Pair pair,
+        ERC20Mock tokenA,
+        ERC20Mock tokenB,
+        uint256 amount
+    ) public {
+        mintAndApprove(tokenA, address(pair), amount);
+        tokenB.mint(address(pair), amount);
+    }
+
+    function assertDeposit(
+        Pair pair,
+        ERC20Mock token,
+        uint256 amount
+    ) public view returns (bool) {
+        return
+            token.balanceOf(address(this)) == 0 &&
+            token.balanceOf(address(pair)) == amount;
+    }
+
+    function assertSwap(
+        Pair pair,
+        ERC20Mock tokenA,
+        ERC20Mock tokenB,
+        uint256 amount
+    ) public view returns (bool) {
+        return
+            tokenA.balanceOf(address(this)) == 0 &&
+            tokenB.balanceOf(address(this)) == amount &&
+            tokenA.balanceOf(address(pair)) == amount &&
+            tokenB.balanceOf(address(pair)) == 0;
+    }
+}
 
 contract PairTest is Test {
     ERC20Mock public tokenA;
@@ -20,18 +64,15 @@ contract PairTest is Test {
 
     function testDeposit() public {
         uint256 amount = 100;
-        tokenA.mint(address(this), amount);
-        tokenA.approve(address(pair), amount);
+        PairTestLib.mintAndApprove(tokenA, address(pair), amount);
         pair.deposit(address(tokenA), amount);
-        assertEq(tokenA.balanceOf(address(this)), 0);
-        assertEq(tokenA.balanceOf(address(pair)), amount);
+        assertTrue(PairTestLib.assertDeposit(pair, tokenA, amount));
     }
 
     function testFailDepositInvalidToken() public {
         uint256 amount = 100;
         ERC20Mock badToken = new ERC20Mock();
-        badToken.mint(address(this), amount);
-        badToken.approve(address(pair), amount);
+        PairTestLib.mintAndApprove(badToken, address(pair), amount);
         pair.deposit(address(badToken), amount);
     }
 
@@ -42,11 +83,9 @@ contract PairTest is Test {
 
     function testDepositLite() public {
         uint256 amount = 100;
-        tokenA.mint(address(this), amount);
-        tokenA.approve(address(pair), amount);
+        PairTestLib.mintAndApprove(tokenA, address(pair), amount);
         pair.depositLite(TokenId.A, amount);
-        assertEq(tokenA.balanceOf(address(this)), 0);
-        assertEq(tokenA.balanceOf(address(pair)), amount);
+        assertTrue(PairTestLib.assertDeposit(pair, tokenA, amount));
     }
 
     function testFailDepositLiteTransferFailed() public {
@@ -54,24 +93,18 @@ contract PairTest is Test {
         pair.depositLite(TokenId.A, amount);
     }
 
-    function testSwap() public {
+    function testSwapAforB() public {
         uint256 amount = 100;
-        // Mint A tokens for the sender.
-        tokenA.mint(address(this), amount);
-        // Approve pair contract to spend A tokens.
-        tokenA.approve(address(pair), amount);
-
-        // Mint B tokens for pair contract.
-        tokenB.mint(address(pair), amount);
-
+        PairTestLib.prepareSwap(pair, tokenA, tokenB, amount);
         pair.swap(address(tokenA), address(tokenB), amount);
+        assertTrue(PairTestLib.assertSwap(pair, tokenA, tokenB, amount));
+    }
 
-        // Assert sender balances
-        assertEq(tokenA.balanceOf(address(this)), 0);
-        assertEq(tokenB.balanceOf(address(this)), amount);
-        // Assert contract balances
-        assertEq(tokenA.balanceOf(address(pair)), amount);
-        assertEq(tokenB.balanceOf(address(pair)), 0);
+    function testSwapBforA() public {
+        uint256 amount = 100;
+        PairTestLib.prepareSwap(pair, tokenB, tokenA, amount);
+        pair.swap(address(tokenB), address(tokenA), amount);
+        assertTrue(PairTestLib.assertSwap(pair, tokenB, tokenA, amount));
     }
 
     function testFailSwapInvalidToken() public {
@@ -79,60 +112,35 @@ contract PairTest is Test {
     }
 
     function testFailSwapInvalidTokenPair() public {
-        pair.swap(address(tokenA), address(tokenA), 1);
+        uint256 amount = 100;
+        PairTestLib.prepareSwap(pair, tokenA, tokenA, amount);
+        pair.swap(address(tokenA), address(tokenA), amount);
     }
 
     function testFailSwapInputTransferFailed() public {
         uint256 amount = 100;
-        tokenB.mint(address(pair), amount);
+        tokenA.mint(address(this), amount);
         pair.swap(address(tokenA), address(tokenB), amount);
     }
 
     function testFailSwapOutputTransferFailed() public {
         uint256 amount = 100;
-        tokenA.mint(address(this), amount);
-        tokenA.approve(address(pair), amount);
+        PairTestLib.mintAndApprove(tokenA, address(pair), amount);
         pair.swap(address(tokenA), address(tokenB), amount);
     }
 
-    function testSwapLiteAtoB() public {
+    function testSwapLiteAforB() public {
         uint256 amount = 100;
-        // Mint A tokens for the sender.
-        tokenA.mint(address(this), amount);
-        // Approve pair contract to spend A tokens.
-        tokenA.approve(address(pair), amount);
-
-        // Mint B tokens for pair contract.
-        tokenB.mint(address(pair), amount);
-
+        PairTestLib.prepareSwap(pair, tokenA, tokenB, amount);
         pair.swapLite(TokenId.A, amount);
-
-        // Assert sender balances
-        assertEq(tokenA.balanceOf(address(this)), 0);
-        assertEq(tokenB.balanceOf(address(this)), amount);
-        // Assert contract balances
-        assertEq(tokenA.balanceOf(address(pair)), amount);
-        assertEq(tokenB.balanceOf(address(pair)), 0);
+        assertTrue(PairTestLib.assertSwap(pair, tokenA, tokenB, amount));
     }
 
-    function testSwapLiteBtoA() public {
+    function testSwapLiteBforA() public {
         uint256 amount = 100;
-        // Mint A tokens for the sender.
-        tokenB.mint(address(this), amount);
-        // Approve pair contract to spend A tokens.
-        tokenB.approve(address(pair), amount);
-
-        // Mint B tokens for pair contract.
-        tokenA.mint(address(pair), amount);
-
+        PairTestLib.prepareSwap(pair, tokenB, tokenA, amount);
         pair.swapLite(TokenId.B, amount);
-
-        // Assert sender balances
-        assertEq(tokenB.balanceOf(address(this)), 0);
-        assertEq(tokenA.balanceOf(address(this)), amount);
-        // Assert contract balances
-        assertEq(tokenB.balanceOf(address(pair)), amount);
-        assertEq(tokenA.balanceOf(address(pair)), 0);
+        assertTrue(PairTestLib.assertSwap(pair, tokenB, tokenA, amount));
     }
 
     function testFailSwapLiteInputTransferFailed() public {
@@ -143,8 +151,7 @@ contract PairTest is Test {
 
     function testFailSwapLiteOutputTransferFailed() public {
         uint256 amount = 100;
-        tokenA.mint(address(this), amount);
-        tokenA.approve(address(pair), amount);
+        PairTestLib.mintAndApprove(tokenA, address(pair), amount);
         pair.swapLite(TokenId.A, amount);
     }
 }
