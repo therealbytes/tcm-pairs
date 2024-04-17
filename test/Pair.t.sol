@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import {ERC20Mock} from "@openzeppelin/mocks/token/ERC20Mock.sol";
 
 import {Test, console} from "forge-std/Test.sol";
-import {Pair} from "../src/Pair.sol";
+import {Pair, TokenId} from "../src/Pair.sol";
 
 contract PairTest is Test {
     ERC20Mock public tokenA;
@@ -91,7 +91,7 @@ contract PairTest is Test {
         // Mint B tokens for pair contract.
         tokenB.mint(address(pair), amount);
 
-        pair.exchangeLite(amount, pair.A_TO_B());
+        pair.exchangeLite(amount, TokenId.A);
 
         // Assert sender balances
         assertEq(tokenA.balanceOf(address(this)), 0);
@@ -111,7 +111,7 @@ contract PairTest is Test {
         // Mint B tokens for pair contract.
         tokenA.mint(address(pair), amount);
 
-        pair.exchangeLite(amount, !pair.A_TO_B());
+        pair.exchangeLite(amount, TokenId.B);
 
         // Assert sender balances
         assertEq(tokenB.balanceOf(address(this)), 0);
@@ -124,13 +124,13 @@ contract PairTest is Test {
     function testFailExchangeLiteInputTransferFailed() public {
         uint256 amount = 100;
         tokenB.mint(address(pair), amount);
-        pair.exchangeLite(amount, pair.A_TO_B());
+        pair.exchangeLite(amount, TokenId.A);
     }
 
     function testFailExchangeLiteOutputTransferFailed() public {
         uint256 amount = 100;
         tokenA.mint(address(this), amount);
         tokenA.approve(address(pair), amount);
-        pair.exchangeLite(amount, pair.A_TO_B());
+        pair.exchangeLite(amount, TokenId.A);
     }
 }
