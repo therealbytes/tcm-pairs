@@ -7,7 +7,7 @@ error InvalidToken();
 
 error InvalidTokenPair();
 
-error TrasferFailed();
+error TransferFailed();
 
 enum TokenId {
     A,
@@ -49,7 +49,7 @@ contract Pair {
 
     function requireSuccessfulTransfer(bool success) internal pure {
         if (!success) {
-            revert TrasferFailed();
+            revert TransferFailed();
         }
     }
 

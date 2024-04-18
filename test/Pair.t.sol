@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import {ERC20Mock} from "@openzeppelin/mocks/token/ERC20Mock.sol";
 import {Test, console2} from "forge-std/Test.sol";
 
-import {Pair, TokenId} from "../src/Pair.sol";
+import {Pair, TokenId, InvalidToken, InvalidTokenPair, TransferFailed} from "../src/Pair.sol";
 
 library PairTestLib {
     function mintAndApprove(
@@ -69,15 +69,17 @@ contract PairTest is Test {
         assertTrue(PairTestLib.assertDeposit(pair, tokenA, amount));
     }
 
-    function testFailDepositInvalidToken() public {
+    function testRevertDepositInvalidToken() public {
         uint256 amount = 100;
         ERC20Mock badToken = new ERC20Mock();
         PairTestLib.mintAndApprove(badToken, address(pair), amount);
+        vm.expectRevert(InvalidToken.selector);
         pair.deposit(address(badToken), amount);
     }
 
-    function testFailDepositTransferFailed() public {
+    function testRevertDepositTransferFailed() public {
         uint256 amount = 100;
+        vm.expectRevert();
         pair.deposit(address(tokenA), amount);
     }
 
@@ -88,8 +90,9 @@ contract PairTest is Test {
         assertTrue(PairTestLib.assertDeposit(pair, tokenA, amount));
     }
 
-    function testFailDepositLiteTransferFailed() public {
+    function testRevertDepositLiteTransferFailed() public {
         uint256 amount = 100;
+        vm.expectRevert();
         pair.depositLite(TokenId.A, amount);
     }
 
@@ -107,25 +110,29 @@ contract PairTest is Test {
         assertTrue(PairTestLib.assertSwap(pair, tokenB, tokenA, amount));
     }
 
-    function testFailSwapInvalidToken() public {
+    function testRevertSwapInvalidToken() public {
+        vm.expectRevert(InvalidToken.selector);
         pair.swap(address(0), address(1), 1);
     }
 
-    function testFailSwapInvalidTokenPair() public {
+    function testRevertSwapInvalidTokenPair() public {
         uint256 amount = 100;
         PairTestLib.prepareSwap(pair, tokenA, tokenA, amount);
+        vm.expectRevert(InvalidTokenPair.selector);
         pair.swap(address(tokenA), address(tokenA), amount);
     }
 
-    function testFailSwapInputTransferFailed() public {
+    function testRevertSwapInputTransferFailed() public {
         uint256 amount = 100;
         tokenA.mint(address(this), amount);
+        vm.expectRevert();
         pair.swap(address(tokenA), address(tokenB), amount);
     }
 
-    function testFailSwapOutputTransferFailed() public {
+    function testRevertSwapOutputTransferFailed() public {
         uint256 amount = 100;
         PairTestLib.mintAndApprove(tokenA, address(pair), amount);
+        vm.expectRevert();
         pair.swap(address(tokenA), address(tokenB), amount);
     }
 
@@ -143,15 +150,17 @@ contract PairTest is Test {
         assertTrue(PairTestLib.assertSwap(pair, tokenB, tokenA, amount));
     }
 
-    function testFailSwapLiteInputTransferFailed() public {
+    function testRevertSwapLiteInputTransferFailed() public {
         uint256 amount = 100;
         tokenB.mint(address(pair), amount);
+        vm.expectRevert();
         pair.swapLite(TokenId.A, amount);
     }
 
-    function testFailSwapLiteOutputTransferFailed() public {
+    function testRevertSwapLiteOutputTransferFailed() public {
         uint256 amount = 100;
         PairTestLib.mintAndApprove(tokenA, address(pair), amount);
+        vm.expectRevert();
         pair.swapLite(TokenId.A, amount);
     }
 }

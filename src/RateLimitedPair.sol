@@ -38,17 +38,9 @@ contract RateLimitedPair is Pair {
             // No swaps
             return (0, false);
         }
-
-        if (lastSwapIndexOlderThan24Hours == 0) {
-            if (swaps[0].timestamp > block.timestamp - 24 hours) {
-                // No swaps older than 24 hours
-                return (0, false);
-            }
-        }
-
-        if (lastSwapIndexOlderThan24Hours == swaps.length - 1) {
-            // All swaps are older than 24 hours
-            return (lastSwapIndexOlderThan24Hours, true);
+        if (block.timestamp < 24 hours) {
+            // No swaps older than 24 hours
+            return (0, false);
         }
 
         uint256 lastSwapIndex = swaps.length - 1;
@@ -70,18 +62,30 @@ contract RateLimitedPair is Pair {
             }
         }
 
-        return (left - 1, true);
+        uint256 index = left - 1;
+        if (swaps[index].timestamp < block.timestamp - 24 hours) {
+            return (index, true);
+        } else {
+            return (0, false);
+        }
     }
 
     function enforceRateLimit(uint256 amount) internal {
         uint256 totalSwappedAmountInLast24Hours;
-        (uint256 left, bool ok) = findLastSwapIndexOlderThan24Hours();
-        if (ok) {
-            lastSwapIndexOlderThan24Hours = left;
+        if (swaps.length == 0) {
+            totalSwappedAmountInLast24Hours = 0;
+        } else {
+            uint256 cumulativeSwappedAmount24HoursAgo;
+            (uint256 left, bool ok) = findLastSwapIndexOlderThan24Hours();
+            if (ok) {
+                lastSwapIndexOlderThan24Hours = left;
+                cumulativeSwappedAmount24HoursAgo = swaps[left]
+                    .cumulativeSwappedAmount;
+            }
             uint256 right = swaps.length - 1;
             totalSwappedAmountInLast24Hours =
                 swaps[right].cumulativeSwappedAmount -
-                swaps[left].cumulativeSwappedAmount;
+                cumulativeSwappedAmount24HoursAgo;
         }
         if (totalSwappedAmountInLast24Hours + amount > rateLimit) {
             revert RateLimitExceeded();
