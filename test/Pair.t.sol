@@ -51,6 +51,14 @@ library PairTestLib {
 }
 
 contract PairTest is Test {
+    event Deposited(address indexed token, uint256 amount);
+
+    event Swapped(
+        address indexed fromToken,
+        address indexed toToken,
+        uint256 amount
+    );
+
     ERC20Mock public tokenA;
     ERC20Mock public tokenB;
 
@@ -65,6 +73,8 @@ contract PairTest is Test {
     function testDeposit() public {
         uint256 amount = 100;
         PairTestLib.mintAndApprove(tokenA, address(pair), amount);
+        vm.expectEmit(true, false, false, true);
+        emit Deposited(address(tokenA), amount);
         pair.deposit(address(tokenA), amount);
         assertTrue(PairTestLib.assertDeposit(pair, tokenA, amount));
     }
@@ -86,6 +96,8 @@ contract PairTest is Test {
     function testDepositLite() public {
         uint256 amount = 100;
         PairTestLib.mintAndApprove(tokenA, address(pair), amount);
+        vm.expectEmit(true, false, false, true);
+        emit Deposited(address(tokenA), amount);
         pair.depositLite(TokenId.A, amount);
         assertTrue(PairTestLib.assertDeposit(pair, tokenA, amount));
     }
@@ -99,6 +111,8 @@ contract PairTest is Test {
     function testSwapAforB() public {
         uint256 amount = 100;
         PairTestLib.prepareSwap(pair, tokenA, tokenB, amount);
+        vm.expectEmit(true, true, false, true);
+        emit Swapped(address(tokenA), address(tokenB), amount);
         pair.swap(address(tokenA), address(tokenB), amount);
         assertTrue(PairTestLib.assertSwap(pair, tokenA, tokenB, amount));
     }
@@ -106,6 +120,8 @@ contract PairTest is Test {
     function testSwapBforA() public {
         uint256 amount = 100;
         PairTestLib.prepareSwap(pair, tokenB, tokenA, amount);
+        vm.expectEmit(true, true, false, true);
+        emit Swapped(address(tokenB), address(tokenA), amount);
         pair.swap(address(tokenB), address(tokenA), amount);
         assertTrue(PairTestLib.assertSwap(pair, tokenB, tokenA, amount));
     }
@@ -139,6 +155,8 @@ contract PairTest is Test {
     function testSwapLiteAforB() public {
         uint256 amount = 100;
         PairTestLib.prepareSwap(pair, tokenA, tokenB, amount);
+        vm.expectEmit(true, true, false, true);
+        emit Swapped(address(tokenA), address(tokenB), amount);
         pair.swapLite(TokenId.A, amount);
         assertTrue(PairTestLib.assertSwap(pair, tokenA, tokenB, amount));
     }
@@ -146,6 +164,8 @@ contract PairTest is Test {
     function testSwapLiteBforA() public {
         uint256 amount = 100;
         PairTestLib.prepareSwap(pair, tokenB, tokenA, amount);
+        vm.expectEmit(true, true, false, true);
+        emit Swapped(address(tokenB), address(tokenA), amount);
         pair.swapLite(TokenId.B, amount);
         assertTrue(PairTestLib.assertSwap(pair, tokenB, tokenA, amount));
     }

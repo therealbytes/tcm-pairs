@@ -14,17 +14,18 @@ enum TokenId {
     B
 }
 
-event Deposited(address indexed token, uint256 amount);
-event Swapped(
-    address indexed fromToken,
-    address indexed toToken,
-    uint256 amount
-);
-
 /**
  * @dev This contract allows two ERC-20 tokens to be swapped 1-to-1.
  */
 contract Pair {
+    event Deposited(address indexed token, uint256 amount);
+
+    event Swapped(
+        address indexed fromToken,
+        address indexed toToken,
+        uint256 amount
+    );
+
     IERC20 public tokenA;
     IERC20 public tokenB;
 
