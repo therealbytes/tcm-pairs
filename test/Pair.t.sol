@@ -3,7 +3,6 @@ pragma solidity ^0.8.13;
 
 import {ERC20Mock} from "@openzeppelin/mocks/token/ERC20Mock.sol";
 import {Test, console2} from "forge-std/Test.sol";
-
 import {Pair, TokenId, InvalidToken, InvalidTokenPair, TransferFailed} from "../src/Pair.sol";
 
 library PairTestLib {

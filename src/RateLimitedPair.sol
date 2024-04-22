@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import {ReentrancyGuard} from "@openzeppelin/utils/ReentrancyGuard.sol";
 import {console2} from "forge-std/Test.sol";
-
 import {Pair, TokenId} from "./Pair.sol";
 
 struct Swap {
-    uint256 cumulativeSwappedAmount;
-    uint256 timestamp;
+    uint128 cumulativeSwappedAmount;
+    uint128 timestamp;
 }
 
 error RateLimitExceeded();
@@ -15,7 +15,7 @@ error RateLimitExceeded();
 /**
  * @dev A pair that enforces a limit on the volume of swaps.
  */
-contract RateLimitedPair is Pair {
+contract RateLimitedPair is Pair, ReentrancyGuard {
     // The maximum volume of swaps in 24 hours
     uint256 public rateLimit;
 
@@ -51,7 +51,9 @@ contract RateLimitedPair is Pair {
         }
 
         uint256 lastSwapIndex = swaps.length - 1;
-        if (swaps[lastSwapIndex].timestamp < block.timestamp - 24 hours) {
+        if (
+            uint256(swaps[lastSwapIndex].timestamp) < block.timestamp - 24 hours
+        ) {
             // Last swap is older than 24 hours
             return (lastSwapIndex, true);
         }
@@ -62,7 +64,7 @@ contract RateLimitedPair is Pair {
 
         while (left < right) {
             uint256 mid = left + (right - left) / 2;
-            if (swaps[mid].timestamp < block.timestamp - 24 hours) {
+            if (uint256(swaps[mid].timestamp) < block.timestamp - 24 hours) {
                 left = mid + 1;
             } else {
                 right = mid;
@@ -70,7 +72,7 @@ contract RateLimitedPair is Pair {
         }
 
         uint256 index = left - 1;
-        if (swaps[index].timestamp < block.timestamp - 24 hours) {
+        if (uint256(swaps[index].timestamp) < block.timestamp - 24 hours) {
             return (index, true);
         } else {
             return (0, false);
@@ -95,12 +97,13 @@ contract RateLimitedPair is Pair {
         uint256 cumulativeSwappedAmount24HoursAgo;
         (uint256 left, bool ok) = findLastSwapIndexOlderThan24Hours();
         if (ok) {
-            cumulativeSwappedAmount24HoursAgo = swaps[left]
-                .cumulativeSwappedAmount;
+            cumulativeSwappedAmount24HoursAgo = uint256(
+                swaps[left].cumulativeSwappedAmount
+            );
         }
         uint256 right = swaps.length - 1;
         return
-            swaps[right].cumulativeSwappedAmount -
+            uint256(swaps[right].cumulativeSwappedAmount) -
             cumulativeSwappedAmount24HoursAgo;
     }
 
@@ -118,12 +121,13 @@ contract RateLimitedPair is Pair {
                 bool ok
             ) = findAndUpdateLastSwapIndexOlderThan24Hours();
             if (ok) {
-                cumulativeSwappedAmount24HoursAgo = swaps[left]
-                    .cumulativeSwappedAmount;
+                cumulativeSwappedAmount24HoursAgo = uint256(
+                    swaps[left].cumulativeSwappedAmount
+                );
             }
             uint256 right = swaps.length - 1;
             totalSwappedAmountInLast24Hours =
-                swaps[right].cumulativeSwappedAmount -
+                uint256(swaps[right].cumulativeSwappedAmount) -
                 cumulativeSwappedAmount24HoursAgo;
         }
         if (totalSwappedAmountInLast24Hours + amount > rateLimit) {
@@ -136,11 +140,14 @@ contract RateLimitedPair is Pair {
      */
     function registerSwap(uint256 amount) internal {
         if (swaps.length == 0) {
-            swaps.push(Swap(amount, block.timestamp));
+            swaps.push(Swap(uint128(amount), uint128(block.timestamp)));
         } else {
             Swap memory lastSwap = swaps[swaps.length - 1];
             swaps.push(
-                Swap(lastSwap.cumulativeSwappedAmount + amount, block.timestamp)
+                Swap(
+                    lastSwap.cumulativeSwappedAmount + uint128(amount),
+                    uint128(block.timestamp)
+                )
             );
         }
     }
@@ -152,7 +159,7 @@ contract RateLimitedPair is Pair {
         address fromTokenAddress,
         address toTokenAddress,
         uint256 amount
-    ) public override {
+    ) public override nonReentrant {
         enforceRateLimit(amount);
         super.swap(fromTokenAddress, toTokenAddress, amount);
         registerSwap(amount);
@@ -161,8 +168,8 @@ contract RateLimitedPair is Pair {
     /**
      * @dev Swap tokens. The token to swap is determined by the `tokenId` parameter.
      */
-    function swapLite(TokenId tokenId, uint256 amount) public override {
-        if (tokenId == TokenId.A) {
+    function swapLite(TokenId fromTokenId, uint256 amount) public override {
+        if (fromTokenId == TokenId.A) {
             swap(address(tokenA), address(tokenB), amount);
         } else {
             swap(address(tokenB), address(tokenA), amount);

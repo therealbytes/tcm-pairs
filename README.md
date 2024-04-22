@@ -1,66 +1,18 @@
-## Foundry
+| src/Pair.sol:Pair contract |                 |       |        |       |         |
+|----------------------------|-----------------|-------|--------|-------|---------|
+| Deployment Cost            | Deployment Size |       |        |       |         |
+| 386626                     | 1577            |       |        |       |         |
+| Function Name              | min             | avg   | median | max   | # calls |
+| deposit                    | 26299           | 36944 | 29885  | 54648 | 3       |
+| depositLite                | 29826           | 42214 | 42214  | 54602 | 2       |
+| swap                       | 25001           | 54699 | 52172  | 86218 | 6       |
+| swapLite                   | 32397           | 68723 | 78371  | 85754 | 4       |
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
 
-Foundry consists of:
-
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
-
-## Usage
-
-### Build
-
-```shell
-$ forge build
-```
-
-### Test
-
-```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+| src/RateLimitedPair.sol:RateLimitedPair contract |                 |       |        |        |         |
+|--------------------------------------------------|-----------------|-------|--------|--------|---------|
+| Deployment Cost                                  | Deployment Size |       |        |        |         |
+| 752088                                           | 3113            |       |        |        |         |
+| Function Name                                    | min             | avg   | median | max    | # calls |
+| swap                                             | 34783           | 96506 | 93631  | 135500 | 26      |
+| swapLite                                         | 38282           | 95348 | 93143  | 135012 | 13      |
