@@ -10,27 +10,27 @@ struct Swap {
     uint128 timestamp;
 }
 
-error RateLimitExceeded();
+error VolumeLimitExceeded();
 
 /**
  * @dev A pair that enforces a limit on the volume of swaps.
  */
-contract RateLimitedPair is Pair, ReentrancyGuard {
+contract VolumeLimitedPair is Pair, ReentrancyGuard {
     // The maximum volume of swaps in 24 hours
-    uint256 public rateLimit;
+    uint256 public volumeLimit;
 
     Swap[] internal swaps;
     uint256 internal lastSwapIndexOlderThan24Hours;
 
     /**
-     * @dev Constructor initializes the pair with the addresses of the two tokens that can be swapped and sets the rate limit.
+     * @dev Constructor initializes the pair with the addresses of the two tokens that can be swapped and sets the volume limit.
      */
     constructor(
         address _tokenAddressA,
         address _tokenAddressB,
-        uint256 _rateLimit
+        uint256 _volumeLimit
     ) Pair(_tokenAddressA, _tokenAddressB) {
-        rateLimit = _rateLimit;
+        volumeLimit = _volumeLimit;
     }
 
     /**
@@ -108,9 +108,9 @@ contract RateLimitedPair is Pair, ReentrancyGuard {
     }
 
     /**
-     * @dev Enforce the rate limit on the volume of swaps.
+     * @dev Enforce the volume limit on the volume of swaps.
      */
-    function enforceRateLimit(uint256 amount) internal {
+    function enforcevolumeLimit(uint256 amount) internal {
         uint256 totalSwappedAmountInLast24Hours;
         if (swaps.length == 0) {
             totalSwappedAmountInLast24Hours = 0;
@@ -130,8 +130,8 @@ contract RateLimitedPair is Pair, ReentrancyGuard {
                 uint256(swaps[right].cumulativeSwappedAmount) -
                 cumulativeSwappedAmount24HoursAgo;
         }
-        if (totalSwappedAmountInLast24Hours + amount > rateLimit) {
-            revert RateLimitExceeded();
+        if (totalSwappedAmountInLast24Hours + amount > volumeLimit) {
+            revert VolumeLimitExceeded();
         }
     }
 
@@ -160,7 +160,7 @@ contract RateLimitedPair is Pair, ReentrancyGuard {
         address toTokenAddress,
         uint256 amount
     ) public override nonReentrant {
-        enforceRateLimit(amount);
+        enforcevolumeLimit(amount);
         super.swap(fromTokenAddress, toTokenAddress, amount);
         registerSwap(amount);
     }
@@ -177,14 +177,14 @@ contract RateLimitedPair is Pair, ReentrancyGuard {
     }
 
     /**
-     * @dev Get the maximum amount that can be swapped at the current time and rate limit.
+     * @dev Get the maximum amount that can be swapped at the current time and volume limit.
      */
     function maxSwap() public view returns (uint256) {
         uint256 volume = swapVolumeInLast24Hours();
-        if (volume >= rateLimit) {
-            // Check if the rate limit has been exceeded to accomodate an updatable rate limit
+        if (volume >= volumeLimit) {
+            // Check if the volume limit has been exceeded to accomodate an updatable volume limit
             return 0;
         }
-        return rateLimit - volume;
+        return volumeLimit - volume;
     }
 }
